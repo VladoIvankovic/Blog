@@ -1,164 +1,158 @@
 import os
-import openai
+import re
 import json
-import datetime
-from github_manager import GitHubManager
+import base64
+import subprocess
+from datetime import datetime
+from dotenv import load_dotenv
+import openai
+import requests
 
-class BlogGenerator:
+load_dotenv()
+
+class AutomatedBlogSystem:
     def __init__(self):
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.github_manager = GitHubManager()
+        self.openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.github_token = os.getenv('GITHUB_TOKEN')
+        self.github_username = os.getenv('GITHUB_USERNAME')
+        self.github_repo = os.getenv('GITHUB_REPO')
         
-    def generate_post(self, topic):
-        """Generate a blog post with code examples for the given topic"""
-        
+        # Blog topics for AI generation
+        self.blog_topics = [
+            "Python data structures and algorithms",
+            "Web scraping with Beautiful Soup",
+            "Building REST APIs with Flask",
+            "Database operations with SQLite",
+            "File processing and automation",
+            "Working with JSON and APIs"
+        ]
+    
+    def generate_blog_post(self, topic):
+        """Generate a blog post using OpenAI's API"""
         prompt = f"""
-        Write a technical blog post about {topic}. Include:
-        1. A compelling title
-        2. Introduction explaining the topic
-        3. Working code example with explanations
-        4. Conclusion
+        Write a technical blog post about "{topic}". 
+        Include:
+        1. A clear introduction
+        2. Step-by-step explanation
+        3. At least one working Python code example
+        4. Practical use cases
+        5. A conclusion
         
-        Format the response as JSON with these fields:
-        - title: Blog post title
-        - content: Main blog content (markdown format)
-        - code: Working code example
-        - filename: Suggested filename for the code
-        - description: Brief description for GitHub repo
+        Format the response in Markdown with proper code blocks using ```python
+        Keep it concise but informative (500-800 words).
         """
         
         try:
-            response = openai.ChatCompletion.create(
+            response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a technical blog writer who creates educational content with working code examples."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1500,
                 temperature=0.7
             )
             
-            # Parse the JSON response
-            post_data = json.loads(response.choices[0].message.content)
-            
-            # Add metadata
-            post_data['created_at'] = datetime.datetime.now().isoformat()
-            post_data['topic'] = topic
-            
-            return post_data
-            
+            return response.choices[0].message.content
         except Exception as e:
-            print(f"Error generating post: {e}")
+            print(f"Error generating blog post: {e}")
             return None
     
-    def save_post(self, post_data):
-        """Save the blog post as a markdown file"""
-        if not post_data:
-            return None
-            
-        # Create filename from title
-        filename = post_data['title'].lower().replace(' ', '-').replace(',', '')
-        filename = f"{filename}.md"
+    def extract_code_examples(self, blog_content):
+        """Extract Python code blocks from blog content"""
+        code_pattern = r'```python\n(.*?)\n```'
+        code_blocks = re.findall(code_pattern, blog_content, re.DOTALL)
+        return code_blocks
+    
+    def validate_code(self, code):
+        """Basic validation of Python code"""
+        try:
+            compile(code, '<string>', 'exec')
+            return True
+        except SyntaxError:
+            return False
+    
+    def create_github_file(self, filename, content, commit_message):
+        """Create or update a file in GitHub repository"""
+        url = f"https://api.github.com/repos/{self.github_username}/{self.github_repo}/contents/{filename}"
         
-        # Create blog post content
-        blog_content = f"""# {post_data['title']}
-
-*Generated on {post_data['created_at']}*
-
-{post_data['content']}
-
-## Code Example
-
-```python
-{post_data['code']}
-```
-
+        headers = {
+            'Authorization': f'token {self.github_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        # Check if file exists
+        response = requests.get(url, headers=headers)
+        
+        data = {
+            'message': commit_message,
+            'content': base64.b64encode(content.encode()).decode()
+        }
+        
+        # If file exists, include SHA for update
+        if response.status_code == 200:
+            data['sha'] = response.json()['sha']
+        
+        response = requests.put(url, json=data, headers=headers)
+        return response.status_code in [200, 201]
+    
+    def generate_filename(self, topic):
+        """Generate a filename from topic"""
+        # Clean topic for filename
+        clean_topic = re.sub(r'[^\w\s-]', '', topic.lower())
+        clean_topic = re.sub(r'[-\s]+', '-', clean_topic)
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        return f"posts/{date_str}-{clean_topic}.md"
+    
+    def run_automation(self):
+        """Main automation process"""
+        print("🤖 Starting AI Blog Generation System...")
+        
+        # Select a random topic
+        import random
+        topic = random.choice(self.blog_topics)
+        print(f"📝 Generating post about: {topic}")
+        
+        # Generate blog post
+        blog_content = self.generate_blog_post(topic)
+        if not blog_content:
+            print("❌ Failed to generate blog post")
+            return
+        
+        # Extract and validate code examples
+        code_examples = self.extract_code_examples(blog_content)
+        valid_code_count = sum(1 for code in code_examples if self.validate_code(code))
+        
+        print(f"✅ Generated blog post with {len(code_examples)} code examples ({valid_code_count} valid)")
+        
+        # Create filename
+        filename = self.generate_filename(topic)
+        
+        # Add metadata header to blog post
+        metadata = f"""---
+title: "{topic.title()}"
+date: {datetime.now().strftime("%Y-%m-%d")}
+author: AI Blog System
+tags: [python, programming, tutorial]
 ---
 
-*This post was automatically generated using AI. The code examples are available on GitHub.*
 """
+        full_content = metadata + blog_content
         
-        # Save to file
-        os.makedirs('blog_posts', exist_ok=True)
-        filepath = os.path.join('blog_posts', filename)
+        # Push to GitHub
+        commit_message = f"Add new blog post: {topic}"
+        success = self.create_github_file(filename, full_content, commit_message)
         
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(blog_content)
+        if success:
+            print(f"🚀 Successfully pushed blog post to GitHub: {filename}")
+        else:
+            print("❌ Failed to push to GitHub")
         
-        print(f"Blog post saved to: {filepath}")
-        return filepath
-    
-    def create_full_post(self, topic):
-        """Generate a complete blog post and push code to GitHub"""
-        print(f"Generating blog post for topic: {topic}")
+        # Save locally as backup
+        os.makedirs("posts", exist_ok=True)
+        local_filename = filename.replace("posts/", "posts/")
+        with open(local_filename, 'w') as f:
+            f.write(full_content)
         
-        # Generate the post
-        post_data = self.generate_post(topic)
-        if not post_data:
-            return None
-        
-        # Save the blog post
-        blog_file = self.save_post(post_data)
-        
-        # Create GitHub repository with code
-        repo_url = self.github_manager.create_repo_with_code(
-            post_data['title'],
-            post_data['description'],
-            post_data['code'],
-            post_data['filename']
-        )
-        
-        if repo_url:
-            print(f"Code examples available at: {repo_url}")
-            
-            # Update blog post with GitHub link
-            self._add_github_link_to_post(blog_file, repo_url)
-        
-        return {
-            'blog_file': blog_file,
-            'repo_url': repo_url,
-            'post_data': post_data
-        }
-    
-    def _add_github_link_to_post(self, blog_file, repo_url):
-        """Add GitHub repository link to the blog post"""
-        if not blog_file or not repo_url:
-            return
-            
-        with open(blog_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Replace the footer
-        updated_content = content.replace(
-            "*This post was automatically generated using AI. The code examples are available on GitHub.*",
-            f"*This post was automatically generated using AI. [View code examples on GitHub]({repo_url})*"
-        )
-        
-        with open(blog_file, 'w', encoding='utf-8') as f:
-            f.write(updated_content)
-
-
-def main():
-    """Example usage"""
-    generator = BlogGenerator()
-    
-    # List of topics to generate posts for
-    topics = [
-        "Building a simple web scraper with Python",
-        "Creating a REST API with Flask",
-        "Data visualization with matplotlib"
-    ]
-    
-    for topic in topics:
-        try:
-            result = generator.create_full_post(topic)
-            if result:
-                print(f"✅ Successfully created post: {result['blog_file']}")
-                print(f"🔗 Repository: {result['repo_url']}")
-            print("-" * 50)
-        except Exception as e:
-            print(f"❌ Error with topic '{topic}': {e}")
-
+        print(f"💾 Saved locally: {local_filename}")
 
 if __name__ == "__main__":
-    main()
+    blog_system = AutomatedBlogSystem()
+    blog_system.run_automation()

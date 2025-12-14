@@ -1,26 +1,27 @@
-# Automated AI Blog System
+# AI-Powered Automated Blog System
 
-This project demonstrates how I built an automated blog system that uses AI to generate posts and automatically pushes working code examples to GitHub.
+This project demonstrates an automated blog system that uses AI to generate technical blog posts with working code examples and automatically pushes them to GitHub.
 
 ## Features
 
-- AI-powered blog post generation using OpenAI's GPT API
-- Automatic code example generation
-- GitHub repository creation and code pushing
-- Simple web interface for managing posts
+- AI-powered blog post generation using OpenAI's API
+- Automatic code example creation and validation
+- GitHub integration for pushing generated content
+- Configurable blog topics and themes
 
 ## Setup
 
 1. Install dependencies:
 ```bash
-pip install openai requests gitpython markdown
+pip install openai requests python-dotenv
 ```
 
-2. Set environment variables:
-```bash
-export OPENAI_API_KEY="your-openai-api-key"
-export GITHUB_TOKEN="your-github-token"
-export GITHUB_USERNAME="your-github-username"
+2. Create a `.env` file with your credentials:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_USERNAME=your_github_username
+GITHUB_REPO=your_blog_repo_name
 ```
 
 3. Run the blog generator:
@@ -28,31 +29,23 @@ export GITHUB_USERNAME="your-github-username"
 python blog_generator.py
 ```
 
-## How it works
+## How it Works
 
-1. The system generates blog post topics and content using OpenAI's API
-2. For technical posts, it creates working code examples
-3. Code examples are automatically pushed to a new GitHub repository
-4. Blog posts are saved as markdown files with links to the GitHub repos
+1. **Content Generation**: Uses OpenAI's GPT model to generate blog posts on programming topics
+2. **Code Validation**: Extracts and validates Python code examples from generated content
+3. **GitHub Integration**: Automatically commits and pushes generated content to your repository
 
-## Example Usage
+## Example Output
 
-```python
-from blog_generator import BlogGenerator
+The system generates:
+- Markdown blog posts with technical content
+- Working Python code examples
+- Automatic Git commits with descriptive messages
 
-generator = BlogGenerator()
-post = generator.generate_post("Python web scraping")
-generator.create_github_repo(post)
-```
+## Configuration
 
-## Files
+Edit the `BLOG_TOPICS` list in `blog_generator.py` to customize the types of posts generated.
 
-- `blog_generator.py` - Main blog generation logic
-- `github_manager.py` - GitHub integration for creating repos and pushing code
-- `README.md` - This file
+## License
 
-## Requirements
-
-- Python 3.7+
-- OpenAI API key
-- GitHub personal access token
+MIT License
