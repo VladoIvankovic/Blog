@@ -1,0 +1,150 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #333;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+h1 {
+    margin-bottom: 1.5rem;
+    color: #2d3436;
+    font-size: 2rem;
+}
+
+.search-section {
+    margin-bottom: 2rem;
+}
+
+#cityInput {
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 25px;
+    width: 70%;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#cityInput:focus {
+    border-color: #74b9ff;
+}
+
+button {
+    padding: 12px 20px;
+    background: #74b9ff;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-left: 10px;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #0984e3;
+}
+
+.weather-result {
+    display: none;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.weather-result.show {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.city-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #2d3436;
+}
+
+.temperature {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #74b9ff;
+    margin-bottom: 0.5rem;
+}
+
+.description {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    text-transform: capitalize;
+    color: #636e72;
+}
+
+.details {
+    background: rgba(116, 185, 255, 0.1);
+    border-radius: 15px;
+    padding: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.error-message {
+    color: #d63031;
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: rgba(214, 48, 49, 0.1);
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 1.5rem;
+    }
+    
+    #cityInput {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    button {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    .temperature {
+        font-size: 2.5rem;
+    }
+}
